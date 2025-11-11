@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仮想テーブルテスト</title>
+    <script src="/index.js"></script>
+    <script src="/VirtualTable.js"></script>
+    <style>
+        body{
+            overflow: hidden;
+        }
+        tr[data-is-even='true']{
+            filter:brightness(0.5);
+        }
+        tr{
+            background:white;
+        }
+        td{
+            border : 1px solid black;
+            width: 50px;
+        }
+        table{
+            border: 1px solid black;
+            border-collapse:  collapse;
+        }
+        .form{
+            height : 10vh;
+        }
+        .table-area{
+            height : 85vh;
+            overflow-x: scroll;
+            overflow-y: scroll;
+        }
+    </style>
+</head>
+<body>
+    <div class="form">
+        <label>
+            <input class="rowCnt" type="number" min="1" value="2">
+            行
+        </label>
+        <label>
+            <input class="colCnt" type="number" min="1" value="13">
+            列
+        </label>
+        <button type="button" class="createUI">テーブルを作成</button>
+    </div>
+    <div class="table-area">
+
+    </div>
+</body>
+</html>
