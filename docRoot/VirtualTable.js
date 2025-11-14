@@ -84,7 +84,7 @@ class VirtualTable extends HTMLElement{
     connectedCallback(){
         const table = this.querySelector("table");
         this.#targetTable = table;
-        //table.style.display = "none";
+        table.style.display = "none";
         try{
             this.#fieldSetFromAttribute();
         }catch(e){
@@ -94,68 +94,86 @@ class VirtualTable extends HTMLElement{
             }
         }
         
-        this.#trList = [...table.querySelectorAll("tbody>tr")].map((value,index)=>{
-            return {
-                index:index
-                ,row:value
-                ,top:index * this.#expectHeight
-            };
-        });
+        
+
         this.#displaySetup();
     }
     #displaySetup(){
         const table = document.createElement("table");
         table.classList.add("display-table");
-        table.appendChild(document.createElement("thead"));
+        const thead =document.createElement("th");
+        [...this.#targetTable.querySelectorAll("thead>tr")].forEach(head=>{
+            thead.appendChild(head);
+        });
+        table.appendChild(thead);
         table.appendChild(document.createElement("tbody"));
         this.#displayTable = table;
         this.appendChild(table);
         this.#upperSpacer = document.createElement("tr");
         this.#lowerSpacer = document.createElement("tr");
+        
+        const observer = new MutationObserver(()=>{
+            this.#updateDisplay();
+        });
+        [...this.#displayTable.querySelectorAll("tr>th")].forEach(head=>{
+            observer.observe(head,{
+                childList:false,
+                subtree:false,
+                attributes:true,
+                attributeFilter:["class"]
+            });
+        });
         this.#updateDisplay();
     }
-
+    addcode(value){
+        return;
+        const code =document.createElement("code")
+        code.textContent =value
+        document.querySelector("#code").appendChild(code)
+    
+}
     /**
      * jqueryソートを発行するため一度移動しヘッダーをクリックする
      * @param {HTMLElement} srcHeader 
      */
     #dispatchJquerySort(srcHeader){
-        const tbody = this.#targetTable.querySelector("tbody");
-        this.#trList.forEach(tr=>{
-            tbody.appendChild(tr.row);
-        });
-        srcHeader.click();
-        //srcHeader.dispatchEvent(new Event("click"));
-        this.#updateDisplay();
+        
 
     }
     #updateDisplay(){
+        this.#trList = [...this.#targetTable.querySelectorAll("tbody>tr")].map((value,index)=>{
+            return {
+                index:index
+                ,row:value
+                ,top:index * this.#expectHeight
+            }
+        });
+        this.addcode("lower 計算");
+        
         const lower = Math.max(0,this.#scrollTop - this.#expectHeight);
+        this.addcode(lower.toString());
+        this.addcode("upper")
         const upper = lower + ((this.#displayCount + 1) * this.#expectHeight);
+        this.addcode(upper);
         const tbody = this.#displayTable.querySelector("tbody");
         const thead = this.#displayTable.querySelector("thead");
-        [...tbody.children].forEach(child => child.remove());
-        [...thead.children].forEach(child => child.remove());
+        
+        
         tbody.appendChild(this.#lowerSpacer);
         this.#lowerSpacer.style.height = lower.toString()+"px";
         let maxPoint = 0;
+        this.addcode(lower)
         this.#trList.filter(tr=> lower <= tr.top && tr.top <= upper).forEach(tr=>{
             tbody.appendChild(tr.row);
+            
             maxPoint = tr.top;
         });
+
+
         
         this.#upperSpacer.style.height = (Math.max(...this.#trList.map(tr=>tr.top)) - maxPoint).toString()+"px";
         tbody.appendChild(this.#upperSpacer);
-        [...this.#targetTable.querySelector("thead").children].forEach(srcHeader=>{
-            const head = srcHeader.cloneNode();
-            [...srcHeader.querySelectorAll("th")].forEach(header=>{
-                const displayHeader = header.cloneNode(true);
-                displayHeader.addEventListener("click",()=>this.#dispatchJquerySort(header));
-                head.appendChild(displayHeader);
-            })
-            
-            thead.appendChild(head);
-        });
+        
     }
 }
 window.customElements.define("virtual-table",VirtualTable);
