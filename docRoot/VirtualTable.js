@@ -25,6 +25,9 @@ class VirtualTable extends HTMLElement{
         this.#scrollTop = 0;
     }
     attributeChangedCallback(name, oldValue, newValue) {
+        if(newValue == oldValue){
+            return;
+        }
         if(name == "scroll-top"){
             this.#scrollTop = parseFloat(newValue);   
         }
@@ -33,6 +36,7 @@ class VirtualTable extends HTMLElement{
             this.#displayCount = Math.ceil(parseFloat(newValue) / this.#expectHeight)
 
         }
+
         this.#updateDisplay();
     }
     /**
