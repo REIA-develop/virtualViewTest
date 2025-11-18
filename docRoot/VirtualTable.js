@@ -1,12 +1,11 @@
 class VirtualTable extends HTMLElement{
     /**監視属性 */
-    static observedAttributes = ["scroll-top", "box-height"];
+    static observedAttributes = [ "box-height"];
     /**@type {Array<{index:number, row:HTMLElement, top:number}>} 行一覧 */
     #trList;
     /**@type {number} １行あたりの予想高さ */
     #expectHeight;
-    /**@type {number}  スクロールの位置*/
-    #scrollTop;
+    
     /**@type {number} 表示個数 */
     #displayCount;
     /**@type {HTMLElement}  表示テーブル */
@@ -19,17 +18,50 @@ class VirtualTable extends HTMLElement{
     #upperSpacer;
     /**@type {HTMLElement} 下側スペーサー */
     #lowerSpacer;
+    /**@type {()=>number} 現在位置の取得関数 */
+    #getScrollTop;
+    /**@type {HTMLElement | undefined} ルートボックス */
+    #scrollBox;
+    /**@type {number} 前回処理したスクロール位置 */
+    #previousScrollTop;
     constructor(){
         super();
         this.#expectHeight = 40;
-        this.#scrollTop = 0;
+        this.#upperSpacer = document.createElement("tr");
+        this.#lowerSpacer = document.createElement("tr");
+        this.#previousScrollTop = -1;
+        this.#getScrollTop = ()=>{
+            console.warn("未設定または初回起動のため機能しません。スクロールを取得する関数をセットしてください");
+            return 0;
+        }
+    }
+    /**
+     * @param {function} _getter スクロールを取得する関数
+     */
+    set scrollBox(_scrollBox){
+        if(!(_scrollBox instanceof HTMLElement)){
+            throw new Error("scrollBoxはHTMLElementを設定してください");
+        }
+        if(this.#scrollBox != undefined){
+            throw new Error("scrollBoxはHTMLElementを設定してください");
+        }
+        this.#scrollBox = _scrollBox;
+        this.#getScrollTop = ()=>this.#scrollBox.scrollTop;
+        const observer = new IntersectionObserver(()=>{
+            console.log("intersect")
+            this.#updateDisplay();
+        },{
+            root: this.#scrollBox
+            ,rootMargin: "0px 0px"
+            ,threshold:0.0
+
+        })
+        observer.observe(this.#lowerSpacer);
+        observer.observe(this.#upperSpacer);
     }
     attributeChangedCallback(name, oldValue, newValue) {
         if(newValue == oldValue){
             return;
-        }
-        if(name == "scroll-top"){
-            this.#scrollTop = parseFloat(newValue);   
         }
         if(name == "box-heihgt"){
             this.#boxHeight = parseFloat(newValue);
@@ -66,14 +98,7 @@ class VirtualTable extends HTMLElement{
                 this.#expectHeight = window.innerHeight * parseFloat(expectHeight)
             }
         }
-        const scrollTop = this.getAttribute("scroll-top");
-        if(scrollTop == null){
-            throw new Error("virtual-tableのscroll-topは必須です。スクロールの高さを同期させてください");
-        }
-        if(!(/^([0-9]|\.)+$/g.test(scrollTop) && scrollTop.split(".").length <= 2)){
-            throw new Error("virtual-tableのscroll-topは必須です。スクロールの高さを同期させてください");
-        }
-        this.#scrollTop = parseFloat(scrollTop);
+
         const boxHeight = this.getAttribute("box-height");
         if(boxHeight == null){
             throw new Error("virtual-tableのbox-heightは必須です。スクロールの高さを同期させてください");
@@ -105,7 +130,7 @@ class VirtualTable extends HTMLElement{
     #displaySetup(){
         const table = document.createElement("table");
         table.classList.add("display-table");
-        const thead =document.createElement("th");
+        const thead =document.createElement("thead");
         [...this.#targetTable.querySelectorAll("thead>tr")].forEach(head=>{
             thead.appendChild(head);
         });
@@ -113,10 +138,22 @@ class VirtualTable extends HTMLElement{
         table.appendChild(document.createElement("tbody"));
         this.#displayTable = table;
         this.appendChild(table);
-        this.#upperSpacer = document.createElement("tr");
-        this.#lowerSpacer = document.createElement("tr");
         
+        this.#trList = [...this.#targetTable.querySelectorAll("tbody>tr")].map((value,index)=>{
+            return {
+                index:index
+                ,row:value
+                ,top:index * this.#expectHeight
+            }
+        });
         const observer = new MutationObserver(()=>{
+            this.#trList = [...this.#targetTable.querySelectorAll("tbody>tr")].map((value,index)=>{
+                return {
+                    index:index
+                    ,row:value
+                    ,top:index * this.#expectHeight
+                }
+            });
             this.#updateDisplay();
         });
         [...this.#displayTable.querySelectorAll("tr>th")].forEach(head=>{
@@ -129,46 +166,25 @@ class VirtualTable extends HTMLElement{
         });
         this.#updateDisplay();
     }
-    addcode(value){
-        return;
-        const code =document.createElement("code")
-        code.textContent =value
-        document.querySelector("#code").appendChild(code)
-    
-}
-    /**
-     * jqueryソートを発行するため一度移動しヘッダーをクリックする
-     * @param {HTMLElement} srcHeader 
-     */
-    #dispatchJquerySort(srcHeader){
+
+    #updateDisplay(){
+        const lower = Math.max(0,this.#getScrollTop() - (this.#expectHeight * 2));
+        const upper = lower + ((this.#displayCount + 1) * this.#expectHeight);
+        const tbody = this.#displayTable.querySelector("tbody");        
+        
+        
+        
         
 
-    }
-    #updateDisplay(){
-        this.#trList = [...this.#targetTable.querySelectorAll("tbody>tr")].map((value,index)=>{
-            return {
-                index:index
-                ,row:value
-                ,top:index * this.#expectHeight
-            }
-        });
-        this.addcode("lower 計算");
-        
-        const lower = Math.max(0,this.#scrollTop - this.#expectHeight);
-        this.addcode(lower.toString());
-        this.addcode("upper")
-        const upper = lower + ((this.#displayCount + 1) * this.#expectHeight);
-        this.addcode(upper);
-        const tbody = this.#displayTable.querySelector("tbody");
-        const thead = this.#displayTable.querySelector("thead");
-        
-        
-        tbody.appendChild(this.#lowerSpacer);
         this.#lowerSpacer.style.height = lower.toString()+"px";
+
+        const displayElementList = []
+        displayElementList.push(this.#lowerSpacer);
         let maxPoint = 0;
-        this.addcode(lower)
+        
         this.#trList.filter(tr=> lower <= tr.top && tr.top <= upper).forEach(tr=>{
-            tbody.appendChild(tr.row);
+            
+            displayElementList.push(tr.row);
             
             maxPoint = tr.top;
         });
@@ -176,7 +192,10 @@ class VirtualTable extends HTMLElement{
 
         
         this.#upperSpacer.style.height = (Math.max(...this.#trList.map(tr=>tr.top)) - maxPoint).toString()+"px";
-        tbody.appendChild(this.#upperSpacer);
+        displayElementList.push(this.#upperSpacer);
+
+        [...tbody.children].forEach(elem=>elem.remove());
+        displayElementList.forEach(elem=>tbody.appendChild(elem));
         
     }
 }

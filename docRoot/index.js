@@ -60,12 +60,12 @@ window.addEventListener("load",()=>{
 		$(table).tablesorter();
 		const container = document.createElement("virtual-table");
 		const getHeightRoot = ()=>getComputedStyle(root).height.replace("px","");
-
+		container.scrollBox = root;
 		container.setAttribute("box-height",getHeightRoot());
 		container.setAttribute("scroll-top","0");
 		container.setAttribute("expect-height","28px");
 		window.addEventListener("resize",()=>container.setAttribute("box-height",getHeightRoot()))
-		root.addEventListener("scroll",()=>container.setAttribute("scroll-top",root.scrollTop));
+		
 		container.appendChild(table);
 		root.appendChild(container);
 		
